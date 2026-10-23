@@ -424,7 +424,14 @@ class InstallTests(unittest.TestCase):
         self.assertEqual((frame["uri"], frame["mimeType"]), (uri, "application/json"))
         # No phone is configured in this state directory: a real preview answer, without a picture.
         self.assertEqual(json.loads(frame["text"])["frame_available"], False)
-        self.assertEqual(json.loads(frame["text"]).keys(), replies[4]["result"]["structuredContent"].keys())
+        resource_frame = json.loads(frame["text"])
+        tool_frame = replies[4]["result"]["structuredContent"]
+        # These sequential reads can straddle preview startup. The optional
+        # direct endpoint appears only after the detached source is ready.
+        self.assertEqual(resource_frame.keys() - {"direct"}, tool_frame.keys() - {"direct"})
+        for shown in (resource_frame, tool_frame):
+            if "direct" in shown:
+                self.assertRegex(shown["direct"], r"^http://127\.0\.0\.1:\d+/[\w-]{32}$")
         self.assertIn("-workbuddy-", replies[2]["result"]["resources"][0]["uri"])
 
     def test_install_ships_the_runtime_without_codex_manifests(self):
